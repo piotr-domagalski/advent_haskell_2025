@@ -3,9 +3,17 @@ module Grid ( Grid(..)
             , toList
             , gridWindowsFill3x3
             , gridAt
+            , fromMap
+            , fromMapOfSize
+            , fromMapWithDefault
+            , fromMapOfSizeWithDefault
             ) where
 
-import Data.List(unfoldr)
+import qualified Data.List as L
+import qualified Data.Map as M
+import qualified Data.Maybe as Maybe
+
+type Coords = (Int, Int)
 
 data Grid a = Grid Int Int [a]
 
@@ -23,7 +31,7 @@ instance Foldable Grid where
     foldr fn acc (Grid _ _ l) = foldr fn acc l
 
 getRows :: Grid a -> [[a]]
-getRows (Grid w h l) = unfoldr aux l
+getRows (Grid w h l) = L.unfoldr aux l
     where aux :: [a] -> Maybe ([a], [a])
           aux [] = Nothing
           aux l 
@@ -42,6 +50,23 @@ fromList w h l
 
 toList :: Grid a -> [a]
 toList (Grid _ _ l) = l
+
+fromMap :: M.Map Coords a -> Grid (Maybe a)
+fromMap m = fromMapOfSize w h m
+    where w = succ $ maximum $ map fst $ M.keys m
+          h = succ $ maximum $ map snd $ M.keys m
+
+fromMapWithDefault :: a -> M.Map Coords a -> Grid a
+fromMapWithDefault def = fmap (Maybe.fromMaybe def) . fromMap
+
+fromMapOfSizeWithDefault :: Int -> Int -> a -> M.Map Coords a -> Grid a
+fromMapOfSizeWithDefault w h def = fmap (Maybe.fromMaybe def) . fromMapOfSize w h
+
+fromMapOfSize :: Int -> Int -> M.Map Coords a -> Grid (Maybe a)
+fromMapOfSize w h m = fromList w h $
+            map (\cs -> M.lookup cs m) $
+            [(x,y) | y <- [0..h-1], x <- [0..w-1]]
+
 
 gridAt :: Int -> Int -> Grid a -> Maybe a
 gridAt x y (Grid w h l) 
