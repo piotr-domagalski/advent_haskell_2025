@@ -21,8 +21,9 @@ main' file = do
     contents <- readFile file
     let parsed = parse contents
         solved = solve parsed
+        solved2 = solve2 parsed
     print solved
-
+    putStrLn $ (show solved2) ++ " = " ++ (show $ sum solved2)
 
 parse :: String -> G.Grid Cell
 parse str = let rows = lines str
@@ -33,6 +34,18 @@ parse str = let rows = lines str
 
 solve :: G.Grid Cell -> Int
 solve = sum . G.toList . fmap isAccessible . countNeighbours
+
+solve2 :: G.Grid Cell -> [Int]
+solve2 g
+    | 0 == solve g = []
+    | otherwise = (solve g):(solve2 $ removeAccessible g)
+
+removeAccessible :: G.Grid Cell -> G.Grid Cell
+removeAccessible = fmap aux . countNeighbours
+    where aux :: Maybe Int -> Cell
+          aux Nothing = Empty
+          aux (Just x) = if x <=4 then Empty else Box
+
 
 countNeighbours :: G.Grid Cell ->  G.Grid (Maybe Int)
 countNeighbours g@(G.Grid w h _) = fmap (aux) $
