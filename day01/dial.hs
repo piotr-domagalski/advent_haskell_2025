@@ -1,30 +1,40 @@
 import System.Environment
 
-newtype Dial = Dial { getPosition :: Int } deriving(Show, Eq, Ord)
+dialNumberCount = 100
+dialInitialPosition = 50
 
-newDial :: Int -> Dial
-newDial i = Dial { getPosition = i }
+type Dial = Int
+newDial = dialInitialPosition
 
 turn :: Int -> Dial -> Dial
-turn i (Dial {getPosition=pos}) = Dial {getPosition=newpos}
-    where newpos = (pos + i) `mod` 100
+turn i pos = (pos + i) `mod` dialNumberCount
 
-data CountZeros = CountZeros Int Dial deriving(Show, Eq)
+type ZeroCounter = (Int, Dial)
+newZeroCounter = (0, newDial)
 
-turn' :: Int -> CountZeros -> CountZeros
-turn' i (CountZeros c d)
-    | getPosition newd == 0 = CountZeros (c+1) newd
-    | otherwise = CountZeros c newd
+turn' :: Int -> ZeroCounter -> ZeroCounter
+turn' i (c, d)
+    | newd == 0 = ((c+1), newd)
+    | otherwise = (c, newd)
     where newd = turn i d
 
-turn'' :: Int -> CountZeros -> CountZeros
-turn'' i (CountZeros c d)
-    | getPosition newd == 0 = CountZeros (c+fullturns+1) newd
-    | otherwise = CountZeros (c+fullturns+crossed) newd
+
+{-
+turn'' :: Int -> ZeroCounter -> ZeroCounter
+turn'' i (c, d) = ((c+fullturns+crossed), newd)
     where newd = turn i d
-          fullturns = abs(i `quot` 100)
+          fullturns = abs(i `quot` dialNumberCount)
+          crossed = if 0 `compare` i /= d `compare` newd then 1 else 0
+-}
+
+turn'' :: Int -> ZeroCounter -> ZeroCounter
+turn'' i (c, d)
+    | newd == 0 = ((c+fullturns+1), newd)
+    | otherwise = ((c+fullturns+crossed), newd)
+    where newd = turn i d
+          fullturns = abs(i `quot` dialNumberCount)
           maybecrossed = if 0 `compare` i /= d `compare` newd then 1 else 0
-          crossed = if getPosition d == 0 then 0 else maybecrossed
+          crossed = if d == 0 then 0 else maybecrossed
 
 main = do
     file:_ <- getArgs
@@ -37,9 +47,23 @@ main' file = do
        ans1 = solve1 turns
        ans1' = solve1' turns
        ans2 = solve2 turns
-   putStrLn $ "stopped on zero: " ++ show ans1
-   putStrLn $ "stopped on zero 2: " ++ show ans1'
-   putStrLn $ "crossed zero: " ++ show ans2
+   putStrLn $ "stopped (scanl): " ++ show ans1 ++
+              "    stopped (counter): " ++ show (fst ans1') ++
+              "    crossed : " ++ show (fst ans2)
+
+runfiles :: [String] -> IO ()
+runfiles [] = do
+    return ()
+runfiles (x:xs) = do
+    putStrLn x
+    main' x
+    runfiles xs
+
+runtests = runfiles [ "test_cross_once_left.txt"
+                    , "test_cross_once_right.txt"
+                    , "test_reach_once_left.txt"
+                    , "test_reach_once_right.txt"
+                    ]
 
 parse :: String -> [Int]
 parse = map (read . \(x:xs) -> (if x == 'L' then '-' else ' '):xs) . lines
@@ -47,10 +71,10 @@ parse = map (read . \(x:xs) -> (if x == 'L' then '-' else ' '):xs) . lines
 -- solve :: [Int] -> Int
 solve1 = length
       . filter (==0)
-      . scanl (\acc v -> (acc+v) `mod` 100) 50
+      . scanl (\acc v -> (acc+v) `mod` dialNumberCount) dialInitialPosition
 
-solve1' :: [Int] -> CountZeros
-solve1' = foldl (flip turn') (CountZeros 0 (newDial 50))
+solve1' :: [Int] -> ZeroCounter
+solve1' = foldl (flip turn') newZeroCounter
 
-solve2 :: [Int] -> CountZeros
-solve2 = foldl (flip turn'') (CountZeros 0 (newDial 50))
+solve2 :: [Int] -> ZeroCounter
+solve2 = foldl (flip turn'') newZeroCounter
