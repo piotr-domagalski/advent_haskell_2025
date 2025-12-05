@@ -1,0 +1,8 @@
+#AOC copyright
+**/data.txt
+**/example.txt
+
+#compiler output
+*.hi
+*.s
+*.out
