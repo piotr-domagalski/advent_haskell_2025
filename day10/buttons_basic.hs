@@ -1,8 +1,9 @@
 import qualified Data.List as L
+import qualified Data.Set as S
 import Data.Bits
 import System.Environment
 
-newtype State = State {getState :: Int} deriving Eq
+newtype State = State {getState :: Int} deriving (Eq, Ord)
 initState :: State
 initState = State {getState = 0}
 
@@ -65,12 +66,16 @@ press :: Button -> State -> State
 press b s = State {getState = getState s `xor` getChange b}
 
 solve :: [(State, [Button])] -> [[(Int, [State])]]
-solve machines = map (\(goal, bs) -> solve' 0 goal [initState] (map press bs)) machines
-solve' :: Int -> State -> [State] -> [State -> State] -> [(Int, [State])]
-solve' i goal states presses = let states' = presses <*> states
-                                in if goal `elem` states' 
-                                   then [(i, states), (i+1, states')]
-                                   else (i, states):solve' (i+1) goal states' presses
+solve machines = map (\(goal, bs) -> solve' 0 goal (map press bs) [initState] S.empty) machines
+
+solve' :: Int -> State -> [State -> State] -> [State] -> S.Set State -> [(Int, [State])]
+solve' i goal presses states already_reached =
+    let states' = presses <*> states
+        already_reached' = already_reached `S.union` (S.fromList states')
+        new_states = filter (`S.notMember` already_reached) states'
+     in if goal `elem` states'
+        then [(i, states), (i+1, states')]
+        else (i, states):solve' (i+1) goal presses new_states already_reached'
 
 main :: IO ()
 main = do
