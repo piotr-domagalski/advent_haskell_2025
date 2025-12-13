@@ -120,9 +120,15 @@ transformToIntegral Solutions { getBaseVals = base_vals, getFreeVars = free_vars
             options = map aux $ zipped
             lincombs = foldl1 (\acc v -> map vector_sum v <*> acc) options
             lincombs' = map (vector_sum base_vals) lincombs
+            coeffs = map (1:) $ choices (map (\a -> [-2*a..2*a]) lcms)
+            vecs = base_vals:(map snd free_vars)
+            lincombs'' = map (linear_comb vecs) coeffs
             integral_base_vals = head 
                                $ filter (all $ (==1) . denominator) lincombs'
-            in Solutions { getBaseVals = integral_base_vals, getFreeVars = integral_free_vars }
+            integral_base_vals'' = head 
+                               $ filter (all $ (>=0))
+                               $ filter (all $ (==1) . denominator) lincombs''
+            in Solutions { getBaseVals = integral_base_vals'', getFreeVars = integral_free_vars }
     where aux (0, (idx, vals)) = []
           aux (_lcm, (idx, vals)) = map (scalar_mul vals) [0.._lcm-1]
 
