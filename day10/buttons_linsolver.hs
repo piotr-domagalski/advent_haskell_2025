@@ -107,7 +107,7 @@ calcSolutions file = map (solveSystem . eqSysMatrixFromMachine) . parse <$> read
 --transformToIntegral :: Solutions -> Solutions
 
 transformToIntegral Solutions { getBaseVals = base_vals, getFreeVars = free_vars }
-    | myptrace "transformToIntegral" False = undefined
+    -- | myptrace "transformToIntegral" False = undefined
     | (all $ (==1) . denominator) base_vals =
         let lcms = map (fromIntegral . foldl (\acc v -> lcm acc $ denominator v) 1 . snd) free_vars
             zipped = zip lcms free_vars
@@ -140,7 +140,7 @@ transformToIntegral Solutions { getBaseVals = base_vals, getFreeVars = free_vars
 
 --transformToNonnegative :: Solutions -> Maybe Solutions
 transformToNonnegative orig@(Solutions { getBaseVals = base_vals, getFreeVars = free_vars })
-    | myptrace ("transformToNonnegative: " ++ show (length base_vals) ++ " " ++ show (length free_vars)) False = undefined
+    -- | myptrace ("transformToNonnegative: " ++ show (length base_vals) ++ " " ++ show (length free_vars)) False = undefined
     | length free_vars == 0 = if (all (>=0) base_vals) then Just orig else Nothing
     | otherwise = 
         let 
@@ -153,8 +153,17 @@ transformToNonnegative orig@(Solutions { getBaseVals = base_vals, getFreeVars = 
          in Just Solutions { getBaseVals = new_base, getFreeVars = free_vars }
 
 transformToMinimal orig@(Solutions { getBaseVals = base_vals, getFreeVars = free_vars }) =
-    let a = 0
-     in a
+    let vecs = map snd free_vars
+        vec_sums = map sum vecs
+        zipped = zip vec_sums vecs
+        negative = map (\(s, vs) -> if s > 0 then scalar_mul vs (-1) else vs) zipped
+     in (aux base_vals negative)
+    where aux val _
+              | any (< 0) val = []
+          aux val [] = [val]
+          aux val (v:vecs) =
+              let nextval = vector_sum val v
+               in val:(aux nextval (v:vecs)) ++ aux nextval vecs
 
 printSolutions :: Solutions -> IO ()
 printSolutions = putStrLn . showSolutions "% 6.2f"
