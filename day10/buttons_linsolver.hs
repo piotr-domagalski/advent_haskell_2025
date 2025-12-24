@@ -146,7 +146,7 @@ transformToNonnegative orig@(Solutions { getBaseVals = base_vals, getFreeVars = 
         let 
             vecs = base_vals:(map snd free_vars)
             dims = length free_vars
-            coeffs = coeffGen dims
+            coeffs = concat $ coeffGen dims
             lincombs = map (linear_comb vecs . (1:)) coeffs
             valid = filter (all (>=0)) lincombs
             new_base = head valid
@@ -157,7 +157,17 @@ transformToMinimal orig@(Solutions { getBaseVals = base_vals, getFreeVars = free
         vec_sums = map sum vecs
         zipped = zip vec_sums vecs
         negative = map (\(s, vs) -> if s > 0 then scalar_mul vs (-1) else vs) zipped
-     in (aux base_vals negative)
+        dims = length negative
+        vecs' = negative -- vecs ++ map (\vs -> scalar_mul vs (-1)) vecs
+        coeffs = coeffGen $ length vecs'
+        lincombs = map (map (linear_comb (base_vals:vecs') . (1:))) coeffs
+        (somevalid, rest) = span (any $ all (>=0)) lincombs
+        lincombs' = somevalid ++ take 5 rest
+        lincombs'' = if dims == 0 then [[base_vals]] else lincombs'
+        filtered = filter (all (>=0)) $ concat lincombs''
+        sums = map sum $ filtered
+     in minimum sums
+     --in (aux base_vals negative)
     where aux val _
               | any (< 0) val = []
           aux val [] = [val]
@@ -186,7 +196,7 @@ vector_sum vec1 vec2
 linear_comb vecs coeffs = foldl1 (vector_sum) $ zipWith (scalar_mul) vecs coeffs
 
 coeffGen 0 = []
-coeffGen len = concat $ map choices $ aux len 0
+coeffGen len = map choices $ aux len 0
     where aux len 0 = replicate len [0]:aux len 1
           aux len n = map (wololo len n) [0..len-1] ++ aux len (n+1)
 
